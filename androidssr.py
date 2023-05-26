@@ -1,4 +1,5 @@
-from adb_shell.adb_device import AdbDeviceTcp
+from adb_shell.adb_device import AdbDeviceTcp, AdbDeviceUsb
+from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 import time
 import threading
 import av
@@ -21,7 +22,22 @@ class Wrapper:
 
 class AndroidSSR:
     def __init__(self, cfg) -> None:
-        self.shell_pipe = AdbDeviceTcp(cfg['adb_ip'], cfg['adb_port'], default_transport_timeout_s=cfg['adb_timeout'])
+        if 'adb_ip' in cfg and 'adb_port' in cfg:
+            self.shell_pipe = AdbDeviceTcp(cfg['adb_ip'], cfg['adb_port'], default_transport_timeout_s=cfg.get('adb_timeout', 10.0))
+        else:
+            self.shell_pipe = AdbDeviceUsb(default_transport_timeout_s=cfg.get('adb_timeout', 10.0))
+        
+        if 'adb_key' in cfg:
+            adbkey = cfg['adb_key']
+            with open(adbkey) as f:
+                priv = f.read()
+            with open(adbkey + '.pub') as f:
+                pub = f.read()
+            self.signer = PythonRSASigner(pub, priv)
+            
+        else:
+            self.signer = None
+        
         self.thread = threading.Thread(target=AndroidSSR._recvloop, args=(self,))
         self.dec_thread = threading.Thread(target=AndroidSSR._decloop, args=(self,))
         self.wp = Wrapper()
@@ -48,8 +64,7 @@ class AndroidSSR:
         self.close()
     
     def connect(self):
-        if self.shell_pipe.connect(): 
-            self.shell('pkill -2 screenrecord')
+        if self.shell_pipe.connect([] if self.signer is None else [self.signer]): 
             self.thread.start() 
             self.dec_thread.start()
             return True
@@ -72,6 +87,7 @@ class AndroidSSR:
                     break
             
     def _recvloop(self):
+        self.shell('pkill -2 screenrecord')
         for data in self.shell_pipe.streaming_shell(self.stream_cmd, decode=False):
             self.wp.write(data)
             if self.wp.should_close:
