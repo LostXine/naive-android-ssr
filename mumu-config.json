@@ -1,0 +1,7 @@
+{
+    "adb_ip": "127.0.0.1",
+    "adb_port": 7555,
+    "adb_timeout": 9.0,
+    "size": [960, 540],
+    "bitrate": "4M"
+}
