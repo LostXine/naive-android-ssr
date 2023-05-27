@@ -49,7 +49,7 @@ class AndroidSSR:
         if 'bitrate' in cfg:
             self.stream_cmd += f' --bit-rate={cfg["bitrate"]}'
         if 'size' in cfg:
-            self.stream_cmd += f' --size {cfg["size"][0]}x{cfg["size"][1]}'
+            self.stream_cmd += f' --size={cfg["size"][0]}x{cfg["size"][1]}'
         self.stream_cmd += ' -'
         print(self.stream_cmd)
         
